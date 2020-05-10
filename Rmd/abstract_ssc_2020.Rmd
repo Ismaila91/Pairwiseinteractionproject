@@ -1,0 +1,15 @@
+---
+title: "Pairwise interaction function estimation of Gibbs point processes using basis expansion"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The class of Gibbs point processes (GPP) is large in the sense that they can model both clustered and repulsive point patterns. They are often specified by their conditional intensity, which for a point pattern $\mathbf{x}$ and a location $u$, is roughly speaking the probability that an event occurs in an infinitesimal ball around $u$ given the rest of $\mathbf{x}$. The most simple, natural and easiest to interpret class of models is the class of pairwise interaction point processes where the conditional intensity depends on the number of points and pairwise distances between them. Estimating this function has almost never been treated in the literature. We tackle this question and propose an orthogonal series estimation procedure of the pairwise interaction function. We will present the methodology, its asymptotic properties and a brief simulation study showing its efficiency.    
+
+
+# Estimation de la fonction d'interaction de paires des processus ponctuels de Gibbs en utilisant l'expansion de base
+
+La classe des processus ponctuels de Gibbs (PPG) est large dans le sens où ils peuvent modéliser des motifs de points attractifs et réguliers. Ils sont souvent spécifiés par leur intensité conditionnelle qui, pour une configuration $\mathbf{x}$ et un emplacement $u$, est grosso modo la probabilité qu'un évènement se produise dans une boule infinitésimale autour de $u$ étant donné le reste de $\mathbf{x}$. La classe de modèles la plus simple, naturelle et facile à interpréter est celle des processus ponctuels d'interaction de paires où l'intensité conditionnelle dépend du nombre de points et des distances par paires entre eux. L'estimation de cette fonction n'a presque jamais été traitée dans la littérature. Nous abordons cette question et proposons une procédure d'estimation de la fonction d'interaction de paires par projection orthogonale. Nous présenterons la méthodologie, ses propriétés asymptotiques et une brève étude de simulation montrant son efficacité.  
