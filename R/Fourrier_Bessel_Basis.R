@@ -1,6 +1,6 @@
 require("spatstat")
 window = owin(xrange = c(0,1), yrange = c(0,1))
-Nbre_points <- 100
+Nbre_points <- 500
 
 X <- rpoispp(lambda = 5, win = window)
 Y <- gridcentres(window = window, 2, 2)
@@ -48,10 +48,12 @@ plot(my.basis$basis10)
 Y <- gridcentres(window = window, 10, 10)
 Y <- ppp(Y$x, Y$y, window = window)
 #X.strauss <- rStrauss(beta = 100, gamma = 1, R=0.05, W = window)
-strauss.param <- list(cif="strauss", par=list(beta=Nbre_points/area(window), gamma=.1, r=0.125), w=window)
+
+strauss.param <- list(cif="strauss", par=list(beta=Nbre_points/area(window), gamma=.5, r=0.08), w=window)
 strauss.mod <- rmh(strauss.param, start=list(n.start=Nbre_points), control=list(nrep=1e6), verbose=FALSE)
-Sk_ux.strauss <- Create.basis(strauss.mod, Y, Rmax = 0.125, rmin = 0.001, 50, xrange=window$xrange, yrange=window$yrange)
-theta.est.strauss <- ppm(strauss.mod ~ ., covariates = Sk_ux.strauss)
+Sk_ux.strauss <- Create.basis(strauss.mod, Y, Rmax = 0.05, rmin = 0.001, 15, xrange=window$xrange, yrange=window$yrange)
+n <- npoints(strauss.mod); f.dummy <- 16; n.dummy <- round(f.dummy*sqrt(n))
+theta.est.strauss <- ppm(strauss.mod ~ ., covariates = Sk_ux.strauss, nd=n.dummy)
 theta.true.strauss <- ppm(strauss.mod ~ 1, Strauss(r = 0.05))
 
 par(mfrow = c(1,2))
@@ -67,11 +69,15 @@ par(mfrow = c(1,1))
 ###############################################################################################
 ############### Fourier-Bessel basis
 
+Y <- gridcentres(window = window, 10, 10)
+Y <- ppp(Y$x, Y$y, window = window)
+
 ## Example 2: Soft core point process
 softcore.param <- list(cif="sftcr", par=list(beta=Nbre_points/area(window), kappa=0.5, sigma=0.1), w=window)
 softcore.mod <- rmh(softcore.param, start=list(n.start=Nbre_points), control=list(nrep=1e6), verbose=FALSE)
-Sk_ux.softcore <- Create.basis(softcore.mod, Y, Rmax=0.06, rmin=0.001, 50, xrange=window$xrange, yrange=window$yrange)
-theta.est.softcore <- ppm(softcore.mod ~ ., covariates = Sk_ux.softcore)
+Sk_ux.softcore <- Create.basis(softcore.mod, Y, Rmax=0.06, rmin=0.001, 15, xrange=window$xrange, yrange=window$yrange)
+n <- npoints(softcore.mod); f.dummy <- 32; n.dummy <- round(f.dummy*sqrt(n))
+theta.est.softcore <- ppm(softcore.mod ~ ., covariates = Sk_ux.softcore, nd=n.dummy)
 theta.true.softcore <- ppm(softcore.mod ~ 1, Softcore(kappa=0.2,sigma=0.01), rbord=0.001)
 par(mfrow = c(1,2))
 plot(predict(theta.est.softcore, Y, type = "cif")); plot(predict(theta.true.softcore, Y, type ="cif"))
@@ -86,8 +92,6 @@ theta.true.dgs <- ppm(dgs.mod ~ 1, DiggleGatesStibbard(rho=0.01), rbord=0.15)
 par(mfrow = c(1,2))
 plot(predict(theta.est.dgs, Y, type = "cif")); plot(predict(theta.true.dgs, Y, type ="cif"))
 par(mfrow = c(1,1))
-
-## Example 4: 
 
 
 ####################################################################################################
@@ -174,19 +178,35 @@ kthcoeff.FourierBessel <- function(r, R, k){ # r>rmin=0.001
 
 ## Orthogonal series estimation of the pairwise interaction function
 Phi.hat <- function(r, R, Theta.hat) {
-  K <- length(Theta.hat); som <- 0
-  for(k in 1:K) {
-    som <- Theta.hat[k]*kthcoeff.FourierBessel(r,R=R,k=k) + som
+  K <- length(Theta.hat)
+  return(sum(Theta.hat*kthcoeff.FourierBessel(r,R=R,k=1:K))) 
   }
-  return(som)
-}
 
 curve(StrHc.pr(x, R=0.10, inter='strauss'), 0.001, 0.15)
-curve(Phi.hat(x,R=9,Theta.hat=coef(theta.est.strauss)[-1]), from=0.001, to=0.15, lty="dashed", add=TRUE)
+curve(Phi.hat(x,R=0.10,Theta.hat=coef(theta.est.strauss)[-1]), from=0.001, to=0.15, lty="dashed", add=TRUE)
 
-curve(Soft.int(x,sigma=.01,kappa=0.2), 0.001, 0.15, main="softcore interaction")
-curve(Phi.hat(x,R=12,Theta.hat=coef(theta.est.softcore)[-1]), from=0.001, to=0.15, lty="dashed", add=TRUE)
+curve(Soft.int(x,sigma=.1,kappa=0.5), 0.001, 0.15, main="softcore interaction")
+curve(Phi.hat(x,R=0.06,Theta.hat=coef(theta.est.softcore)[-1]), from=0.001, to=0.15, lty="dashed", add=TRUE)
 
 curve(DGS.int(x,rho=0.01), 0.001, 0.15)
 curve(Phi.hat(x,R=2,Theta.hat=coef(theta.est.dgs)[-1]), from=0.001, to=0.15, lty="dashed", add=TRUE)
+
+
+
+
+FSim <- function(Model="strauss",Y,r,R,nsim=1,kap=NULL,sig=NULL,gam=NULL,window=square(1),npts,K,f.dummy=2,int.rg=NULL) {
+  mod.par <- switch(Model,
+                    'strauss'= { list(cif=Model,par=list(beta=npts/area(window),gamma=gam,r=int.rg),w=window) },
+                    'sftcr'= { list(cif=Model,par=list(beta=npts/area(window),kappa=kap,sigma=sig),w=window) }
+  )
+  PhiEst <- rep(NA, nsim)
+  for(i in 1:nsim){
+    mod <- rmh(mod.par, start=list(n.start=npts), control=list(nrep=1e6), verbose=FALSE)
+    Sk_ux <- Create.basis(mod,Y=Y,Rmax=R,rmin=0.001,K=15,xrange=window$xrange,yrange=window$yrange)
+    n <- npoints(mod); n.dummy <- round(f.dummy*sqrt(n))
+    ThetaEst <- ppm(mod ~ ., covariates=Sk_ux, nd=n.dummy)
+    PhiEst[i] <- Phi.hat(r=r, R=R, Theta.hat=coef(ThetaEst)[-1])
+  }
+  return(PhiEst)
+}
 
